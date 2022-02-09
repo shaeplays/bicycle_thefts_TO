@@ -1,0 +1,209 @@
+---
+title: "Reported Toronto Bike Theft Recovery is Abysmal"
+author: "Shae-Linn Davies"
+date: "6 February 2022"
+output:
+  bookdown::pdf_document2: default
+abstract: "The accurate reporting of crime in cities is of the utmost importance to understand civic safety, and where to best allocate police funding. Individuals who are victims of crime may be motivated to report crime, especially if they are seeking the recovery of stolen items such as their mode of transportation. While reports of bicycle theft occuring at apartments have doubled in a seven-year period, reports of stolen bikes from other locations remain largely consistent. Recovery of stolen bikes is consistently reported as extremely low, or is of unknown status, in comparison to the number of bikes reported as stolen. This report utilizes data on reported bicycle theft in Toronto from the City of Toronto Open Data Portal (Gelfand 2020) to: (1) assess reported bike theft trends in Toronto and the success rate of bike recovery and (2) critically discuss factors related to the aforementioned, including potential challenges that come from and with the reporting and analysis of bicycle thefts." 
+toc: no
+thanks: 'Code and data are available at: https://github.com/shaeplays/bicycle_thefts_TO'
+bibliography: references.bib
+subtitle: Reported Bicycle Theft to the Toronto Police Service, 2014-2020
+---
+
+```{r libraries, include=FALSE}
+#### Workspace set-up: downloads and read in ####
+
+# Download libraries
+library(opendatatoronto)
+library(knitr)
+library(janitor)
+library(lubridate)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(kableExtra)
+
+#Read in the new csv file 
+clean_thefts <- 
+  read_csv(here("outputs/cleaned_thefts.csv")) 
+
+```
+
+
+# Introduction
+
+Since the launch of the Open Data Toronto Portal in 2009, [@gelfand], municipal data has become freely-accessible to the public, assuming they know how to access, read and understand it. In the context of managing a complex city, this supports accountability and transparency, especially on the part of groups who hold social power, such as the police. In 2017, the Toronto Police Service released their The Way Forward Plan [@way_forward] as an effort to modernize community safety in Toronto. Part of this plan was to revamp the way data related to crime in Toronto is shared. 
+
+Regarding transportation data and research, there have not been many studies to evaluate bicycle thefts, nor overall security and availability of facilities to safely store bicycles [@van_lierop_grimsrud_el-geneidy_2015]. This is an area of interest as “cycling is one of the fastest growing transportation modes in Toronto” [@city_cycling_info]. The City of Toronto has launched the *StreetSmartsTO* initiative, which highlights the importance of road safety through the prioritization of the expansion of bike lanes and creation of bike maintenance and road safety workshops [@cycle_toronto_2021]. There exists some direction on their website related to theft prevention and what to do if one's bike is stolen, however it is not easily accessible there, nor on the Toronto Police Service website.
+
+There also may exist gaps in reporting information by the Toronto Police, overall. While it is clear apartment bike thefts have doubled since 2014, thefts reported as originating at other locations remain consistent. The more worrisome trend is the lack of data regarding recovered bikes, and the disparity between the number of reported stolen bikes and reported recovered bikes. This is of concern because this means the data is either not accurately recorded, or, that there is a staggering amount of bikes that are never recovered. Often, bicycle crimes are viewed as low-priority crimes, and thus are not properly recorded to the police [@bike_off]. If there are inaccurate records, or lack of demonstration of ability to follow up on reported thefts, this has the potential to breed doubt in the police. In addition, this means that bike crimes may be much more prominent than expected. 
+
+In this report, I use `R` [@R-base] to identify trends in reported bike thefts between 2014-2020. This timeframe is explored as this is the timeframe for which there was available data at the time of writing this report however, it is understood that `opendatatoronto` [@R-opendatatoronto] regularly updates their datasets. I will first analyze trends in location of theft. Then I will compare how many bikes are reported stolen in comparison to recovered. Most importantly, I will discuss issues of bias, missing reporting data, the potential for misleading data, and what real-world implications this may have, through the lens of considering how the police is sharing data with the public. 
+
+# Data
+
+## Data Source and Collection
+
+I have imported and processed the Bicycle Thefts `opendatatoronto` dataset [@R-opendatatoronto] and analyzed it using `R` [@R-base] and its related packages. The dataset was last refreshed March 23, 2021 and is of "Gold" Data Quality Score. Packages that were used for analysis and preparation include `janitor` [@R-janitor], `lubridate` [@R-lubridate], `tidyverse` [@R-tidyverse], `tidyr` [@R-tidyr] and `dplyr` [@R-dplyr]. I created a graph using `ggplot2` [@ggplot22016] and created tables using `kableExtra` [@R-kableExtra]. I used `knitr` [@R-knitr] and `bookdown` [@R-bookdown] to generate the final `RMarkdown` [@R-rmarkdown] report. 
+
+The following disclaimer is not included on the `opendatatoronto` dataset [@R-opendatatoronto] site, however, the specific Bicycle Thefts dataset is also accessible through the Toronto Police Service Publc Safety Data Portal, where it is included: "The reported crime dataset is intended to provide communities with information regarding public safety and awareness. The data supplied to the Toronto Police Service by the reporting parties is preliminary and may not have been fully verified" [@toronto_police_service_2022]. This must be taken into careful consideration when conducting data analysis, as there is a margin of uncertainty that is unknown.
+
+## Data Characteristics and Methodology
+
+The Bicycle Thefts `opendatatoronto` dataset [@R-opendatatoronto] includes bike theft occurrences reported by date, in Toronto's 140 neighbourhoods between 2014-2020. There are 25,569 observations across 33 attributes in the original dataset. The 33 attributes include:unique IDs for each occurrence, the primary offence, the occurrence date (i.e., when the presumed theft occurred), report date (i.e., when the occurrence was reported), the neighbourhood and police division the theft occurred in, the type of location the theft occurred at (e.g., outside, at an apartment, at an educational institution), as well as the bike’s make, model, type, speed, colour, cost, and whether it had since been recovered or not, as information was available. An additional attribute, called *instances*, was created to count each occurrence, for efficiency. I primarily utilized attributes including the location of the bike theft, along with the occurrence and report dates of theft and the status of whether the stolen bike had been recovered. Of note, the dataset included occurrence date, report date, and also provided separate month, day, time, hour, and day of year attributes which while I have not used, are appreciated as conveniences should I explore the dataset further at a later time.  
+
+## Reported Bike Thefts 
+
+To begin exploring bike thefts in Toronto occurring between 2014-2020, I first considered bike thefts by reported location. Per *Breaking into bicycle theft* [@van_lierop_grimsrud_el-geneidy_2015], lack or fear of theft while using bike parking facilities is of great concern thus, I used the "premises type" attribute to understand where bike theft was most common. 
+
+Of note, in the `opendatatoronto` Bicycle Thefts dataset [@R-opendatatoronto], there also exists a "location type" attribute. "Premises type" provides a higher level categorization, with types including: Transit, Educational, Commercial, House, Apartment, Outside, or Other. "Location type", is unnecessarily detailed for this level of report (i.e., types include more precise categorization such as "GO Bus" or "TTC Subway" instead of the higher level premise type, "Transit"). In addition, "location type" does not further illuminate the finding that there is an overwhelmingly evident disparity, seen in Figure \@ref(fig:figs1), between bikes that are reported as stolen and bikes that have been recovered. Thus, utilizing "premise type" was sufficient and I have not included a more detailed graph by location type. 
+
+```{r figs1, echo=FALSE, fig.cap="Reported Bicycle Thefts in Toronto by Premise of Occurence 2014-2020"}
+#### Explore the cleaned dataset ####
+
+#Create a bar graph of report thefts by premise type 
+reported_thefts_graph <-
+cleaned_thefts |>
+ggplot(aes(fill = status,
+           y =  reorder(premises_type, premises_type, #reordering bars for readability  
+                     function(y)-length(y)))) + # Based on: https://stackoverflow.com/questions/5208679/order-bars-in-ggplot2-bar-graph
+geom_bar() +
+theme_minimal() +
+facet_wrap(~report_year, ncol = 2) +
+  ggtitle("Most Bicycles Reported as Stolen are not Recovered") +
+  labs(y = "Reported Premise of Occurence",
+       x ="Number of Bicycle Theft Reports") +
+  scale_fill_brewer(name = "Status of Bicycle",
+                    labels = c("Recovered", "Stolen", "Unknown"),
+                    palette = "Set1") +
+  theme(plot.title = element_text(face = "bold"))
+reported_thefts_graph
+
+```
+
+Year over year, "Outside" is often the top location from which bikes were stolen. This is unsurprising as most bike racks are located outside [@R-opendatatoronto]. Of interest, apartment thefts greatly increased over the six-year period, with it being the most common location for reported bike theft in 2019 and 2020. This may be due to the COVID-19 pandemic, where more people were in their place of residence more often and would be able to scout out and steal bikes. Similarly, the number of bikes stolen from a commercial and educational locations also saw decreases in 2019 and 2020, most likely due to the COVID-19 pandemic, as less people we congregating in those spaces, thus, saw less occasions for bikes to be at those locations. Transit was consistently the least common location for bikes to be stolen from, followed by educational premises. Houses, commercial spaces, and other venues accounted for an overall average number of bike thefts. Unfortunately, most bikes' statuses remain stolen(24,807/25,569 or 97%), with only 308/25,569 (1.2%) reported as "Recovered". 454/25,569 (1.8%) reported bikes are of "Unknown" status, referring to bikes that had been reported as stolen, but it is unknown of whether they have been recovered or not. This may be due to lack of follow-up on the part of the police, the victim, both parties, or other factors. 
+
+Refer to Table \@ref(tab:tab1), below, for a more detailed overview of reported bicycle thefts in Toronto from 2014-2020 by premise type.
+
+```{r tab1, echo = FALSE, message = FALSE, fig.cap="Table 1"}
+
+# Creating a new version of the dataset for clarity 
+cleaned_thefts_for_table <- cleaned_thefts
+
+# Creating a new column called instances to be able to sum reported thefts
+cleaned_thefts_for_table$instances <- 1
+
+# Updating the premises_type column name for table readability and aesthetics  
+cleaned_thefts_for_table_fix_names <- cleaned_thefts_for_table %>%
+  rename(Premise = premises_type)
+
+# Based on: https://community.rstudio.com/t/creating-a-neat-table-with-kable/74310/5
+summary_tab_1 <- cleaned_thefts_for_table_fix_names %>%
+  
+# Group the table according to premise, report year and status
+  group_by(Premise, report_year, status) %>%
+# Create a summary of total number of thefts for neater appearance to the table 
+  summarise(total_thefts = sum(instances)) %>%
+# Change the orientation of the table so that report_year become the variable headings
+  pivot_wider(names_from = report_year, values_from = total_thefts) %>%
+  mutate(status = factor(status)) %>%
+  arrange(status) %>%
+  select(status, everything())
+
+# Create table to present the data
+tab_1 <- kable(summary_tab_1[, -1], 
+  caption = "Reported Bicycle Thefts in Toronto by Premise of Occurence 2014-2020",
+    format = "latex", booktabs = TRUE) %>%
+  kable_styling(font_size = 10,
+                latex_options = "hold_position") %>%
+  pack_rows(tab_kable, colnum = 1,
+    index = table(fct_inorder(summary_tab_1$status), useNA = "no")) %>%
+  footnote(general = "Graphed data from Figure 1 is provided in table format for readability and accessibility.")
+tab_1
+```
+
+## Recovered Bikes
+
+To take a more granular perspective, I next considered same-day reported bike thefts (refer to Table \@ref(tab:tab2)) and bike thefts that were reported at least 24 hours after the theft occurred (refer to Table \@ref(tab:tab3)). By comparing this factor, a better understanding of trends of rate of recovery of bicycles can be identified, along with the ability to hypothesize reasons why this might be. 
+
+Same-day reporting of a bike theft leading to the recovery of the bike was overall slightly more successful than recovery of a bike that had been reported as stolen 24 hours or more after the occurrence. 169/308 (54.9%) recoveries accounted for the former while 139/308 (45.1%) recoveries accounted for the latter. 
+
+Recovery data by premise type was fairly consistent whether the victim of crime had reported same-day or at least 24 hours after the theft had taken place. Bikes recovered were most commonly taken from outside, and from apartment buildings. Of note, these were also the most common places to have had a bike stolen from. Bikes recovered were least likely recovered if taken from transit, followed closely by educational premises. Table \@ref(tab:tab2) and Table \@ref(tab:tab3) can be fond below, further detailing this information. 
+
+The table below is a subset of data that corresponds to the data plotted in Figure \@ref(fig:figs1), specifically depicting the number of bikes in Toronto between 2014-2020 that had been reported as stolen on the same day as the theft occurred, and were later recovered.
+
+```{r tab2, echo = FALSE, message = FALSE, fig.cap="Table 2"}
+# Based on: https://community.rstudio.com/t/creating-a-neat-table-with-kable/74310/5
+same_day <- cleaned_thefts_for_table_fix_names |>
+  filter(status == "RECOVERED" & occurrence_date == report_date)  %>%
+# Group the table according to premise, report year and status
+  group_by(Premise, report_year, status) %>%
+# Create a summary of total number of thefts for neater appearance to the table
+  summarise(Same_Day_Recoveries = sum(instances)) %>%
+# Change the orientation of the table so that report_year become the variable headings
+  pivot_wider(names_from = report_year, values_from = Same_Day_Recoveries) %>%
+  mutate(status = factor(status)) %>%
+  arrange(status) %>%
+  select(status, everything())
+
+# Create table to present the data on same day reports 
+tab_2 <- kable(same_day[, -1],
+  caption = "Recovered Bikes in Toronto 2014-2020: Report Date Matched the Theft Occurence Date",
+    format = "latex", booktabs = TRUE) %>%
+  kable_styling(font_size = 10,
+                latex_options = "hold_position") %>%
+  pack_rows(tab_kable, colnum = 1,
+    index = table(fct_inorder(same_day$status), useNA = "no"))
+tab_2
+```
+
+
+The table below is a subset of data that corresponds to the data plotted in Figure \@ref(fig:figs1), specifically depicting the number of bikes in Toronto between 2014-2020 that had been reported 24 hours or more after the theft occurred, and were later recovered.
+
+```{r tab3, echo = FALSE, message = FALSE, fig.cap="Table 3"}
+# Based on: https://community.rstudio.com/t/creating-a-neat-table-with-kable/74310/5
+diff_day <- cleaned_thefts_for_table_fix_names |>
+  filter(status == "RECOVERED" & occurrence_date != report_date)  %>%
+# Group the table according to premise, report year and status
+  group_by(Premise, report_year, status) %>%
+# Create a summary of total number of thefts for neater appearance to the table
+  summarise(Different_Day_Recoveries = sum(instances)) %>%
+# Change the orientation of the table so that report_year become the variable headings
+  pivot_wider(names_from = report_year, values_from = Different_Day_Recoveries) %>%
+  mutate(status = factor(status)) %>%
+  arrange(status) %>%
+  select(status, everything())
+
+# Create table to present the data on different day reports
+tab_3 <- kable(diff_day[, -1],
+  caption = "Recovered Bikes in Toronto 2014-2020: Report Date was >24h After the Theft Occurrence Date",
+    format = "latex", booktabs = TRUE) %>%
+  kable_styling(font_size = 10,
+                latex_options = "hold_position") %>%
+  pack_rows(tab_kable, colnum = 1,
+    index = table(fct_inorder(diff_day$status), useNA = "no")) 
+tab_3
+```
+
+## Data Strengths and Weaknesses
+
+It is quite impressive to have included 33 attributes in a dataset related to bike thefts. It is appreciated that the dataset includes both the date of the report, and when the bike was noticed missing, with a separate column for the occurrence date. This provides transparency as it is possible someone reported their bike as stolen much later than the date it was originally stolen. At the same time, there is no column to specify when bikes were recovered, if they were recovered, creating a source of ambiguity. Similarly, there are no columns holding the police accountable to maintaining up-to-date records, such as a column to specify when they last visited each theft case, or whether they followed up with the victim of crime to see if it had been found via other means. In addition, the data lacks contextual information that could support the recovery of more bikes in the future such as which police division recovered each bike if it was recovered, and what neighbourhood and premise type it was recovered from. This could be compared to which neighbourhoods and premises bikes are most often stolen from to further inform the police's bike recovery methodology. Data collection weaknesses are further discussed in the [Discussion] section, below.
+
+# Discussion
+
+A closer look into reported bicycle theft and recovery highlights the unfortunate reality that bike recovery rates in Toronto are historically abysmal between 2014-2020. While there are minimal entries with unknown data, it is unfortunate that there are more bikes of "unknown" status than "recovered" status. Factors for the low rate of recovery potentially include the police's failure to follow-up with cases, lack of search leads, and/or lack of resources to update the status of occurrences. These factors are potentially worrisome, especially as failure to accurately keep and update records could create mistrust from the public, against the police's *The Way Forward* [@way_forward] plan. Worse, if the police were neglecting to update the data, this could create inflated data of open police cases. This would be extremely problematic if used as a basis to increase police presence and funding. While unlikely, these are still of note as potential factors. More likely, bikes are much harder to track as they are smaller, and easily taken apart. They can be swiftly be moved, and resold whole or sold for parts. 
+
+To expand upon the police’s potential challenges of lack of leads and motivation, factors could include lack of incentive or time to find the bike in comparison to larger or more dangerous crimes. It must also be taken into account that the dataset and my data representations do not and cannot include all stolen and recovered bikes, as mentioned in the disclaimer. This is because this data relies on reporting and follow-up to take place between the police and the public. In itself, this produces challenges due to potential for communication flow barriers between the parties, separate and in addition to data input and validation.
+
+# Conclusion
+
+While there exists a large gap between the number of bikes reported as stolen and those reported as later recovered, it is important that this data is recorded, available and accessible to allow opportunity for the public to access information related to neighbourhood crime, and make more informed decisions. On the part of the police, analyzing this data is important to be able to recognize trends such as the large increase of reported bike thefts in apartments. Hopefully with more awareness regarding this gap, along with these additional insights on bike theft trends, more bikes are reported as recovered in the future. Further methods for bike theft prevention must be explored, along with the potential to streamline the reporting process to reduce the potential for reporting inaccuracies or ambiguity. Statistics of bike thefts in Toronto can be an indicator of city safety but should not be the only factor due to the reliance on public reporting and police follow-up. Overall, it is appreciated that the Toronto Police Service is working towards being more transparent to help build relationships of trust with the public.
+
+
+\newpage
+# References
+<div id="refs"></div>
+
+
+

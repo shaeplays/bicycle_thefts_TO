@@ -1,1 +1,3 @@
-# bicycle_thefts_TO
+This repository is used to explore bicycle theft data from the [Open Data Toronto Portal](https://open.toronto.ca/dataset/bicycle-thefts/) (Gelfand 2020). I used this publicly-available data to analyze reported bike thefts in Toronto between 2014-2020. More specifically, the outcome of this exploration is a report highlighting the difference between the number of bikes that have been reported as stolen to the Toronto Police, and the number of bikes that were then recovered by the Toronto Police. Also discussed in the report are factors as to why this difference is relevant. 
+
+Contents: 'Inputs' include all that remains unedited, including raw data in csv format and references. 'Outputs' include the final report and files used to create the final report. 'Scripts' include the script for importing and cleaning the data. 
